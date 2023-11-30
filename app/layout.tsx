@@ -1,8 +1,10 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Rubik } from 'next/font/google'
+import { Poppins } from 'next/font/google'
 
-const rubik = Rubik({ subsets: ['latin'] })
+export const dynamic = 'force-dynamic'
+
+const poppins = Poppins({ weight: '400', subsets: ['devanagari'] })
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -16,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en'>
-      <body className={rubik.className}>{children}</body>
+      <body className={poppins.className}>{children}</body>
     </html>
   )
 }

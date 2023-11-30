@@ -1,5 +1,7 @@
-import React from 'react'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
+import DeleteButton from './DeleteButton'
 
 // type definitions
 type TicketParams = {
@@ -9,43 +11,56 @@ type TicketParams = {
 type Params = {
   params: { id: string }
 }
+interface Ticket {
+  id: string
+  title: string
+  user_email: string
+  body: string
+  priority: string
+}
 
 /* Next.js APIs */
 export const dynamicParams = true
 
 export async function generateMetadata({ params }: Params) {
-  const id = params.id
-  const res = await fetch(`http://localhost:4000/tickets/${id}`)
-  const ticket = await res.json()
+  const supabase = createServerComponentClient({ cookies })
+
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select()
+    .eq('id', params.id)
+    .single()
 
   return {
-    title: `Dojo Helpdesk | ${ticket.title}`,
+    title: `Dojo Helpdesk | ${ticket?.title || 'Ticket not found'}`,
   }
 }
 
 // fetch all tickets so next can statically generate the pages at build time
-export async function generateStaticParams() {
-  const res = await fetch('http://localhost:4000/tickets')
+// export async function generateStaticParams() {
+//   const res = await fetch('http://localhost:4000/tickets')
 
-  const tickets = await res.json()
+//   const tickets = await res.json()
 
-  return tickets.map((ticket: any) => ({
-    id: ticket.id,
-  }))
-}
+//   return tickets.map((ticket: any) => ({
+//     id: ticket.id,
+//   }))
+// }
 
 async function getTicket(id: string) {
-  const res = await fetch('http://localhost:4000/tickets/' + id, {
-    next: {
-      revalidate: 60,
-    },
-  })
+  const supabase = createServerComponentClient({ cookies })
 
-  if (!res.ok) {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (!data || error) {
     notFound()
   }
 
-  return res.json()
+  return data
 }
 
 export default async function TicketDetails({
@@ -53,12 +68,21 @@ export default async function TicketDetails({
 }: {
   params: TicketParams
 }) {
-  const ticket = await getTicket(params.id)
+  const ticket: Ticket = await getTicket(params.id)
+
+  const supabase = createServerComponentClient({ cookies })
+
+  const { data } = await supabase.auth.getSession()
 
   return (
     <main>
       <nav>
         <h2>Ticket Details</h2>
+        <div className='ml-auto'>
+          {data.session?.user.email === ticket.user_email && (
+            <DeleteButton id={ticket.id} />
+          )}
+        </div>
       </nav>
       <div className='card'>
         <h3>{ticket.title}</h3>
